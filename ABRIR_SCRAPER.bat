@@ -1,55 +1,54 @@
 @echo off
-chcp 65001 >nul
 title Google Maps Scraper
-
+color 0A
 echo.
 echo  ============================================
-echo       Google Maps Scraper - Launcher
+echo   Google Maps Scraper — Iniciando...
 echo  ============================================
 echo.
 
-:: Verifica Python
+:: Verifica se Python esta instalado
 python --version >nul 2>&1
-if %errorlevel% neq 0 (
+if errorlevel 1 (
+    color 0C
     echo  [ERRO] Python nao encontrado!
-    echo  Baixe em: https://python.org/downloads
-    echo  Na instalacao, marque "Add Python to PATH"
+    echo.
+    echo  Instale o Python em: https://python.org/downloads
+    echo  Marque a opcao "Add Python to PATH" durante a instalacao.
     echo.
     pause
-    exit /b 1
+    exit /b
 )
 
-for /f "tokens=*" %%i in ('python --version 2^>^&1') do echo  [OK] %%i
-
-echo.
-echo  Instalando/verificando dependencias...
-pip install selenium webdriver-manager openpyxl requests beautifulsoup4 lxml -q
-echo  [OK] Dependencias prontas.
-echo.
-
-:: Verifica se o arquivo existe
-if not exist "%~dp0maps_scraper_v2.py" (
-    echo  [ERRO] Arquivo maps_scraper_v2.py nao encontrado!
-    echo  Certifique-se que o .bat e o .py estao na mesma pasta.
-    echo.
-    pause
-    exit /b 1
+:: Instala dependencias automaticamente se necessario
+echo  Verificando dependencias...
+python -c "import selenium" >nul 2>&1
+if errorlevel 1 (
+    echo  Instalando selenium...
+    pip install selenium webdriver-manager -q
+)
+python -c "import openpyxl" >nul 2>&1
+if errorlevel 1 (
+    echo  Instalando openpyxl...
+    pip install openpyxl -q
+)
+python -c "import requests" >nul 2>&1
+if errorlevel 1 (
+    echo  Instalando requests + beautifulsoup4...
+    pip install requests beautifulsoup4 lxml -q
 )
 
-echo  Iniciando programa...
-echo  ============================================
+echo  Tudo pronto! Abrindo o programa...
 echo.
 
+:: Executa o scraper (na mesma pasta do .bat)
 python "%~dp0maps_scraper_v2.py"
 
-echo.
-echo  ============================================
-if %errorlevel% neq 0 (
-    echo  [ERRO] O programa encerrou com erro codigo: %errorlevel%
-    echo  Leia a mensagem acima para entender o problema.
-) else (
-    echo  Programa encerrado normalmente.
+if errorlevel 1 (
+    color 0C
+    echo.
+    echo  [ERRO] O programa encerrou com um erro.
+    echo  Verifique se o arquivo maps_scraper_v2.py esta na mesma pasta que este .bat
+    echo.
+    pause
 )
-echo  ============================================
-echo.
-pause

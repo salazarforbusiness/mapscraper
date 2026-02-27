@@ -144,14 +144,84 @@ class MapsScraper:
         return f"https://www.google.com/maps/search/{q}"
 
     # ── Verifica se endereço pertence à região ────────────────────────────────
+    # Países/continentes: endereços locais nunca contêm esses termos
+    REGIOES_AMPLAS = {
+        "brasil", "brazil", "eua", "usa", "estados unidos", "united states",
+        "canada", "australia", "franca", "france", "espanha", "spain",
+        "portugal", "argentina", "chile", "colombia", "mexico", "peru",
+        "alemanha", "germany", "italia", "italy", "japao", "japan",
+        "china", "india", "russia", "africa", "europa", "europe",
+        "america", "asia", "oceania",
+    }
+
+    # Estados BR: nome normalizado → sigla que aparece nos endereços
+    ESTADOS_BR = {
+        "acre": "ac", "alagoas": "al", "amapa": "ap", "amazonas": "am",
+        "bahia": "ba", "ceara": "ce", "distrito federal": "df",
+        "espirito santo": "es", "goias": "go", "maranhao": "ma",
+        "mato grosso do sul": "ms", "mato grosso": "mt", "minas gerais": "mg",
+        "para": "pa", "paraiba": "pb", "parana": "pr", "pernambuco": "pe",
+        "piaui": "pi", "rio de janeiro": "rj", "rio grande do norte": "rn",
+        "rio grande do sul": "rs", "rondonia": "ro", "roraima": "rr",
+        "santa catarina": "sc", "sao paulo": "sp", "sergipe": "se",
+        "tocantins": "to",
+    }
+
     def _na_regiao(self, endereco, regiao):
+        """
+        Verifica se o endereço pertence à região pedida.
+        - País/continente → não filtra (endereços locais não contêm "Brasil" etc.)
+        - Estado BR (ex: "Ceará") → aceita tanto "ceara" quanto "- ce" no endereço
+        - Cidade/bairro → verifica presença no endereço
+        """
         if not endereco:
-            return True  # sem endereço = benefício da dúvida
+            return True
+
+        regiao_n = self._norm(regiao.strip())
+        partes = [p.strip() for p in regiao_n.split(",") if p.strip()]
+
+        # Se todas as partes são países/continentes → aprova direto
+        todas_amplas = all(
+            any(a in parte for a in self.REGIOES_AMPLAS)
+            for parte in partes
+        )
+        if todas_amplas:
+            return True
+
         end_n = self._norm(endereco)
-        for parte in [p.strip() for p in regiao.split(",") if p.strip()]:
-            palavras = [w for w in self._norm(parte).split() if len(w) > 2]
-            if palavras and not all(w in end_n for w in palavras):
-                return False
+
+        for parte in partes:
+            # Ignora partes que são países/continentes
+            if any(a in parte for a in self.REGIOES_AMPLAS):
+                continue
+
+            # Verifica se é nome de estado BR — aceita também a sigla
+            sigla = self.ESTADOS_BR.get(parte)
+            if sigla:
+                # Endereço contém o nome do estado OU a sigla (ex: "- ce" ou "ce,")
+                if parte in end_n or re.search(r'\b' + sigla + r'\b', end_n):
+                    continue
+                else:
+                    return False
+
+            # Região composta (ex: "rio de janeiro") — testa nome e sigla
+            for nome_estado, sig in self.ESTADOS_BR.items():
+                if nome_estado in parte:
+                    restante = parte.replace(nome_estado, "").strip()
+                    estado_ok = nome_estado in end_n or re.search(r'\b' + sig + r'\b', end_n)
+                    if not estado_ok:
+                        return False
+                    if restante:
+                        palavras = [w for w in restante.split() if len(w) > 2]
+                        if palavras and not all(w in end_n for w in palavras):
+                            return False
+                    break
+            else:
+                # Termo genérico (cidade, bairro, país estrangeiro)
+                palavras = [w for w in parte.split() if len(w) > 2]
+                if palavras and not all(w in end_n for w in palavras):
+                    return False
+
         return True
 
     # ── Chrome ────────────────────────────────────────────────────────────────
@@ -652,9 +722,9 @@ class MapsScraper:
             right =Side(style="thin", color="CCCCCC"),
         )
 
-        colunas  = ["Nome","Categoria","Endereço","Telefone","WhatsApp",
-                    "E-mail","Site","Estrelas","Avaliações","Keyword","URL Maps"]
-        larguras = [35, 20, 45, 18, 45, 35, 40, 10, 12, 20, 50]
+        colunas  = ["Nome","E-mail","Telefone","WhatsApp","Categoria",
+                    "Endereço","Site","Estrelas","Avaliações","Keyword","URL Maps"]
+        larguras = [35, 35, 18, 45, 20, 45, 40, 10, 12, 20, 50]
 
         for c, (col, larg) in enumerate(zip(colunas, larguras), 1):
             cell = ws.cell(row=1, column=c, value=col)

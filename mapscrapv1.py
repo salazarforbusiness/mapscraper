@@ -104,12 +104,14 @@ class MapsScraper:
 
     # ── WhatsApp ──────────────────────────────────────────────────────────────
     def _whatsapp(self, tel):
+        """
+        Gera link wa.me/ usando o número exatamente como veio do Maps.
+        Não assume nem adiciona código de país.
+        """
         if not tel:
             return ""
         nums = re.sub(r"\D", "", tel)
-        if len(nums) >= 10:
-            if 10 <= len(nums) <= 11:
-                nums = "55" + nums
+        if len(nums) >= 7:
             return f"https://wa.me/{nums}"
         return ""
 

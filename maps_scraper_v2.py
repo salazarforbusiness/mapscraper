@@ -9,7 +9,7 @@
 ║  REQUISITO: Google Chrome instalado no PC (gratuito)            ║
 ╚══════════════════════════════════════════════════════════════════╝
 """
-
+#oi sou o vininicus amigo do fefe q fez o codigo, ele mandoumuito bem
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import threading
